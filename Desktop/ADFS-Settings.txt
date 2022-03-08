@@ -1,0 +1,27 @@
+
+Client Identifier
+e3547419-4476-4e81-b875-f3040217cb09
+
+Shared Secret:
+n188ni8lTZ0Eujn9S3T3ECidCR1YmIIJG01FG46N
+
+OpenID Address:
+https://adfs.vclass.local/adfs/.well-known/openid-configuration
+
+Base distinguished name for users
+cn=users,dc=vclass,dc=local
+
+Base distinguished name for groups
+dc=vclass,dc=local
+
+Username
+administrator@vclass.local
+
+Password
+VMware1!
+
+Primary server url
+ldaps://dc.vclass.local:636 
+
+SSL certificate
+Browse to CAroot.cer on Student Desktop

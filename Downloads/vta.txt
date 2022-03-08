@@ -1,0 +1,69 @@
+
+--------------------------------------------------------------------------
+Task 2: Export the TPM Certificate and ESXi Image metadata from a host to be attested.
+--------------------------------------------------------------------------
+Connect-VIServer -server sa-esxi-08.vclass.local -User root -Password VMware1!
+$vmhost = Get-VMHost
+Get-Tpm2EndorsementKey -VMHost $vmhost
+$tpm2 = Get-Tpm2EndorsementKey -VMHost $vmhost
+Export-Tpm2CACertificate -Tpm2EndorsementKey $tpm2 -FilePath C:\vta\cacert.zip
+Export-VMHostImageDb -VMHost $vmhost -FilePath C:\vta\image.tgz
+Disconnect-VIServer -server * -Confirm:$false
+
+--------------------------------------------------------------------------
+Task 3: Export the Trusted User Principal
+--------------------------------------------------------------------------
+Connect-VIServer -server sa-vcsa-01.vclass.local -User trustedadmin@vsphere.local -Password VMware1!
+Export-TrustedPrincipal -FilePath C:\vta\principal.json
+Disconnect-VIServer -server * -Confirm:$false
+
+--------------------------------------------------------------------------
+Task 4: Enable vSphere Trust Authority Services
+--------------------------------------------------------------------------
+Connect-VIServer -server sb-vcsa-01.vclass.local -User trustedadmin@vsphere.local -Password VMware1!
+Get-TrustAuthorityCluster "SB-VTA-Cluster-01"
+$TAcluster = Get-TrustAuthorityCluster "SB-VTA-Cluster-01"
+Set-TrustAuthorityCluster -TrustAuthorityCluster $TAcluster -State Enabled -Confirm:$false
+Get-TrustAuthorityCluster "SB-VTA-Cluster-01"
+Disconnect-VIServer -server * -Confirm:$false
+
+--------------------------------------------------------------------------
+Task 5: Import the trusted host information to the Trust Authority Cluster
+--------------------------------------------------------------------------
+Connect-VIServer -server sb-vcsa-01.vclass.local -User trustedadmin@vsphere.local -Password VMware1!
+New-TrustAuthorityPrincipal -TrustAuthorityCluster $TAcluster -FilePath C:\vta\principal.json
+Get-TrustAuthorityPrincipal -TrustAuthorityCluster $TAcluster
+New-TrustAuthorityTpm2CACertificate -Name tpmca -TrustAuthorityCluster $TAcluster -FilePath C:\vta\cacert.zip
+New-TrustAuthorityVMHostBaseImage -TrustAuthorityCluster $TAcluster -FilePath C:\vta\image.tgz
+Disconnect-VIServer -server * -Confirm:$false
+
+--------------------------------------------------------------------------
+Task 6: Create a Trusted Key Provider on the Trust Authority Cluster
+--------------------------------------------------------------------------
+Connect-VIServer -server sb-vcsa-01.vclass.local -User trustedadmin@vsphere.local -Password VMware1!
+New-TrustAuthorityKeyProvider -TrustAuthorityCluster $TAcluster -MasterKeyId 1 -Name SB-KMS-01 -KmipServerAddress 172.20.110.193
+$kp = Get-TrustAuthorityKeyProvider -TrustAuthorityCluster $TAcluster
+New-TrustAuthorityKeyProviderClientCertificate -KeyProvider $kp
+Get-TrustAuthorityKeyProviderServerCertificate -KeyProviderServer $kp.KeyProviderServers
+$cert = Get-TrustAuthorityKeyProviderServerCertificate -KeyProviderServer $kp.KeyProviderServers
+Add-TrustAuthorityKeyProviderServerCertificate -ServerCertificate $cert
+Disconnect-VIServer -server * -Confirm:$false
+
+--------------------------------------------------------------------------
+Task 7: Export the Trust Authority Cluster Settings
+--------------------------------------------------------------------------
+Connect-VIServer -server sb-vcsa-01.vclass.local -User trustedadmin@vsphere.local -Password VMware1!
+Export-TrustAuthorityServicesInfo -TrustAuthorityCluster $TAcluster -FilePath C:\vta\cluster_settings.json
+Disconnect-VIServer -server * -Confirm:$false
+
+--------------------------------------------------------------------------
+Task 8: Import the Trust Authority Cluster Settings into the Trusted Hosts Cluster
+--------------------------------------------------------------------------
+Connect-VIServer -server sa-vcsa-01.vclass.local -User trustedadmin@vsphere.local -Password VMware1!
+$TrustedCluster = Get-TrustedCluster "SA-Trusted-Cluster-01"
+Import-TrustAuthorityServicesInfo -FilePath C:\vta\cluster_settings.json -Confirm:$false
+Set-TrustedCluster -TrustedCluster $TrustedCluster -State Enabled -Confirm:$false
+Disconnect-VIServer -server * -Confirm:$false
+
+
+
