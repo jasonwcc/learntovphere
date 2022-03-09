@@ -46,6 +46,18 @@ $kp = Get-TrustAuthorityKeyProvider -TrustAuthorityCluster $TAcluster
 New-TrustAuthorityKeyProviderClientCertificate -KeyProvider $kp
 Get-TrustAuthorityKeyProviderServerCertificate -KeyProviderServer $kp.KeyProviderServers
 $cert = Get-TrustAuthorityKeyProviderServerCertificate -KeyProviderServer $kp.KeyProviderServers
+
+--------------------------------------------------------------------------
+During lab, you will get error running following Add-Trust cmd due to missing item in the KMS, so executing following remediation
+--------------------------------------------------------------------------
+Download putty and ssh into 172.20.110.193 # KMS server in the lab
+Login: vcqekmip
+Password: VMware1!
+
+Run the following command to generate the keys (reconfigure the KMS) :
+sudo bash /home/vcqekmip/pykmip_setup.sh exit
+Resume following cmd
+
 Add-TrustAuthorityKeyProviderServerCertificate -ServerCertificate $cert
 Disconnect-VIServer -server * -Confirm:$false
 
